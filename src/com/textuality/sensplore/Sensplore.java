@@ -73,7 +73,6 @@ public class Sensplore extends Activity {
 	private Listener mRVListener = null;
 	private ArrayList<Datum> mAccelCollector = new ArrayList<Datum>();
 	private ArrayList<Datum> mAngleCollector = new ArrayList<Datum>();
-
 	private Flipper mRVFlipper = new Flipper();
 
 	private void runTest() {
