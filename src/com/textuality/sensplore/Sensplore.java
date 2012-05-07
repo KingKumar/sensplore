@@ -39,10 +39,21 @@ import android.os.Environment;
 import android.view.View;
 import android.widget.Button;
 
+/**
+ * This activity puts up a button saying "Go” then records the TYPE_ACCELEROMETER and TYPE_ROTATION_VECTOR sensor events until you
+ *  hit the button (which has been relabeled “Done” again.  Then it writes them out into a CSV file and shoots them off with ACTION_SEND; 
+ *  if you select Gmail in the pick list, the CSV will become an attachment.  You can edit the title or text of the Gmail message if you
+ *  want to remind yourself what you were testing.  
+ *  
+ * As of initial release, what is captured is two sets of x/y/z values, the first being the raw accelerometer output, the second
+ *  a set of changes in the angles of rotation around the x, y, and z axes, as computed based on the rotation-vector data.  In both 
+ *  cases the axes are those illustrated in the first picture at http://developer.android.com/reference/android/hardware/SensorEvent.html - 
+ *  note that these are *device* not world co-ordinates.
+ */
 public class Sensplore extends Activity {
 
-	private long mStartedAt = 0;
-
+	/////////////////////////////////////////////////////
+	// Control stuff
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
@@ -51,53 +62,87 @@ public class Sensplore extends Activity {
 		button.setOnClickListener(mStarter);
 	}
 
-	View.OnClickListener mStopper = new View.OnClickListener() {
+	private final View.OnClickListener mStopper = new View.OnClickListener() {
 		public void onClick(View v) {
-			mManager.unregisterListener(mAccelListener);
-			mManager.unregisterListener(mRVListener);
-			(new Writer()).execute();
+			finishTest();
 		}
 	};
 
-	View.OnClickListener mStarter = new View.OnClickListener() {
+	private final View.OnClickListener mStarter = new View.OnClickListener() {
 		public void onClick(View v) {
 			Button button = (Button) v;
 			button.setText(R.string.stop_test);
 			button.setOnClickListener(mStopper);
-			(new FileHeader()).execute(Sensplore.this, null, null);
+			(new TestStarter()).execute(Sensplore.this, null, null);
 		}
 	};
 
+	/**
+	 * Writes out the file header and launches the test 
+	 */
+	private class TestStarter extends AsyncTask<Context, Void, Void> {
+		@Override
+		protected Void doInBackground(Context... params) {
+			try {
+				PrintStream p = getFile(false);
+				Account[] accounts = AccountManager.get(params[0]).getAccountsByType("com.google");
+				p.println("Reported by: " + accounts[0].name +
+						" System: " + android.os.Build.MODEL +
+						" (" + android.os.Build.DEVICE + "/" + android.os.Build.PRODUCT + ")" +
+						",,,,,,,,");
+				p.println(",,,,,,,,");
+				p.close();
+			} catch (Exception e) {
+				throw new RuntimeException(e);
+			}
+			return null;
+		}
+		
+		@Override
+		protected void onPostExecute(Void result) {
+			super.onPostExecute(result);
+			runTest();
+		}
+	}
+
+	/////////////////////////////////////////////////////
+	// Sensor stuff
+	private long mStartedAt = 0;
 	private SensorManager mManager = null;
-	private Listener mAccelListener = null;
-	private Listener mRVListener = null;
-	private ArrayList<Datum> mAccelCollector = new ArrayList<Datum>();
-	private ArrayList<Datum> mAngleCollector = new ArrayList<Datum>();
-	private Flipper mRVFlipper = new Flipper();
+	private final Listener mAccelListener = new Listener();
+	private final Listener mRVListener = new Listener();
+	private final ArrayList<Datum> mAccelCollector = new ArrayList<Datum>();
+	private final ArrayList<Datum> mAngleCollector = new ArrayList<Datum>();
+	private final Flipper mRVFlipper = new Flipper();
 
 	private void runTest() {
 		mManager = (SensorManager) getSystemService(SENSOR_SERVICE);
-
-		mAccelListener = new Listener();
-		mRVListener = new Listener();
 		Sensor accelSensor = mManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
 		Sensor rvSensor = mManager.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR);
 		mManager.registerListener(mRVListener, rvSensor, SensorManager.SENSOR_DELAY_GAME);
 		mManager.registerListener(mAccelListener, accelSensor, SensorManager.SENSOR_DELAY_GAME);
 	}
 
+	private void finishTest() {
+		mManager.unregisterListener(mAccelListener);
+		mManager.unregisterListener(mRVListener);
+		(new TestResultProcessor()).execute();
+	}
+	
+	/**
+	 * This is the only part that needs to be efficient
+	 */
 	private class Listener implements SensorEventListener {
-
 		@Override
 		public void onSensorChanged(SensorEvent sensorEvent) {
 
-			int sensorType = sensorEvent.sensor.getType();
+			final int sensorType = sensorEvent.sensor.getType();
 			switch (sensorType) {
 			case Sensor.TYPE_ROTATION_VECTOR:
-				float[] last = mRVFlipper.last(), next = mRVFlipper.next();
+				final float[] last = mRVFlipper.last(), next = mRVFlipper.next();
 				SensorManager.getRotationMatrixFromVector(next, sensorEvent.values);
 				if (last != null) {
-					float[] values = new float[3];
+					final float[] values = new float[3];
 					SensorManager.getAngleChange(values, next, last);
 					mAngleCollector.add(new Datum(sensorEvent.timestamp, values));
 				}
@@ -114,16 +159,17 @@ public class Sensplore extends Activity {
 		}
 	}
 
-	private class Writer extends AsyncTask<Void, Void, Void> {
-
+	/**
+	 * Writes the saved-up data out in CSV format and sends it off with an Intent
+	 */
+	private class TestResultProcessor extends AsyncTask<Void, Void, Void> {
 		@Override
 		protected Void doInBackground(Void... params) {
 
 			try {
 				PrintStream p = getFile(true);
-				p.println("Accelerometer,,,,, Synth Angle Change,,,,, Real Angle Change,,,");
-				p.println("t,Accel x, Accel y, Accel z,, " +
-						"t,Angle x, Angle y, Angle z");
+				p.println("Accelerometer,,,,, Angle Change,,,");
+				p.println("t (msec),Accel x, Accel y, Accel z,, t (msec),Angle x, Angle y, Angle z");
 				int accelSize = mAccelCollector.size();
 				int angleSize = mAngleCollector.size();
 
@@ -149,7 +195,7 @@ public class Sensplore extends Activity {
 
 			i.putExtra(android.content.Intent.EXTRA_EMAIL, new String[] { address });
 			i.putExtra(Intent.EXTRA_SUBJECT, "Sensplore: Test results");
-			i.putExtra(Intent.EXTRA_TEXT, "(attached as CSV)");
+			i.putExtra(Intent.EXTRA_TEXT, "(Attached as CSV)");
 			i.putExtra(Intent.EXTRA_STREAM, fileURI());
 			i.setType("text/plain");
 			startActivity(Intent.createChooser(i, "Send mail"));
@@ -163,8 +209,8 @@ public class Sensplore extends Activity {
 	}
 
 	private class Datum {
-		public long mWhen;
-		public float[] mValues;
+		public final long mWhen;       // in nanoseconds since mStartedAt
+		public final float[] mValues;
 
 		// should be called AccelerometerDatum - values are x/y/z
 		public Datum(SensorEvent event) {
@@ -175,7 +221,7 @@ public class Sensplore extends Activity {
 		// should be called AngularDatum - values are azimuth/pitch/roll or z/x/y
 		public Datum(long when, float[] values) {
 			mWhen = deltaT(when);
-			float x = values[1], y = values[2], z = values[0];
+			final float x = values[1], y = values[2], z = values[0];
 			mValues = values;
 			mValues[0] = x; mValues[1] = y; mValues[2] = z;
 		}
@@ -197,6 +243,7 @@ public class Sensplore extends Activity {
 		}
 	}
 
+	/////////////////////////////////////////////////////
 	/// File stuff
 	private File mOutputFile = null;
 
@@ -234,33 +281,13 @@ public class Sensplore extends Activity {
 	public Uri fileURI() {
 		return Uri.fromFile(mOutputFile);
 	}
-	private class FileHeader extends AsyncTask<Context, Void, Void> {
-		@Override
-		protected Void doInBackground(Context... params) {
-			try {
-				Context context = params[0];
-				PrintStream p = getFile(false);
-				Account[] accounts = AccountManager.get(context).getAccountsByType("com.google");
-				p.println("Reported by: " + accounts[0].name +
-						" System: " + android.os.Build.MODEL +
-						" (" + android.os.Build.DEVICE + "/" + android.os.Build.PRODUCT + ")" +
-						",,,,,,,,");
-				p.println(",,,,,,,,");
-				p.close();
-			} catch (Exception e) {
-				throw new RuntimeException(e);
-			}
-			return null;
-		}
-		@Override
-		protected void onPostExecute(Void result) {
-			super.onPostExecute(result);
-			runTest();
-		}
-	}
-
+	
+	/**
+	 * There are a few places in sensor-land where you get the delta of two 9x9 float[] matrices. This pre-allocates two and 
+	 *  flips them back and forth between "next" and "last", so you don’t have to keep allocating new ones.
+	 */
 	private class Flipper {
-		private final float[] mR1 = new float[16], mR2 = new float[16];
+		private final float[] mR1 = new float[9], mR2 = new float[9];
 		private final float[][] mR = { mR1,  mR2 };
 		private int mLast = -1;
 
