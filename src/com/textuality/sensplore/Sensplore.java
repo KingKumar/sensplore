@@ -36,7 +36,6 @@ import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Environment;
-import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 
@@ -53,7 +52,7 @@ import android.widget.Button;
  */
 public class Sensplore extends Activity {
 
-    private static final String TAG = "Sensplore";
+    public static final String TAG = "Sensplore";
 
     /////////////////////////////////////////////////////
     // Control stuff
@@ -116,9 +115,9 @@ public class Sensplore extends Activity {
     private final ArrayList<Datum> mAccelCollector = new ArrayList<Datum>();
     private final ArrayList<Datum> mAngleCollector = new ArrayList<Datum>();
     private float[] mGravity = null;
-    private boolean mHaveGravity = false;
+    private boolean mHaveGravitySensor = false;
     private final Flipper mFlipper = new Flipper();
-    
+
     // alpha is calculated as t / (t + dT).
     // t is the low-pass filter's time-constant; it depends on what you want in your app. If you set it
     //  to 1 second, it'll take about 1s for this code to "see" a change in of gravity. There is no "right" 
@@ -132,7 +131,7 @@ public class Sensplore extends Activity {
 
     private void runTest() {
         mManager = (SensorManager) getSystemService(SENSOR_SERVICE);
-        Sensor accelSensor = mManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
+        Sensor accelSensor = mManager.getDefaultSensor(Sensor.TYPE_LINEAR_ACCELERATION);
         Sensor rvSensor = mManager.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR);
         Sensor gSensor = mManager.getDefaultSensor(Sensor.TYPE_GRAVITY);
         if (accelSensor != null && rvSensor != null) {
@@ -141,11 +140,11 @@ public class Sensplore extends Activity {
         } else {
             // TODO: apologize and exit 
         }
+        gSensor = null; //*******************************
         if (gSensor != null) {
-            mHaveGravity = true;
+            mHaveGravitySensor = true;
             mManager.registerListener(getListener(), gSensor, SensorManager.SENSOR_DELAY_GAME);
             mGravity = new float[3];
-            mGravity[0] = mGravity[1] = mGravity[2] = 0.0f;
         }
     }
 
@@ -169,8 +168,7 @@ public class Sensplore extends Activity {
         @Override
         public void onSensorChanged(SensorEvent sensorEvent) {
 
-            final int sensorType = sensorEvent.sensor.getType();
-            switch (sensorType) {
+            switch (sensorEvent.sensor.getType()) {
             case Sensor.TYPE_ROTATION_VECTOR:
                 final float[] last = mFlipper.last(), next = mFlipper.next();
                 SensorManager.getRotationMatrixFromVector(next, sensorEvent.values);
@@ -181,8 +179,11 @@ public class Sensplore extends Activity {
                 }
                 mFlipper.flip();
                 break;
+            case Sensor.TYPE_LINEAR_ACCELERATION:
+                mAccelCollector.add(new Datum(sensorEvent));
+                break;
             case Sensor.TYPE_ACCELEROMETER:
-                if (!mHaveGravity) {
+                if (!mHaveGravitySensor) {
                     estimateGravity(sensorEvent.values);
                 }
                 for (int i = 0; i < 3; i++) {
@@ -196,7 +197,7 @@ public class Sensplore extends Activity {
                 }
             }
         }
-        
+
         private void estimateGravity(float[] accel) {
             if (mGravity == null) {
                 mGravity = new float[3];

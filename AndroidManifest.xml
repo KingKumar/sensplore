@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.textuality.sensplore"
-    android:versionCode="1"
-    android:versionName="1.0" >
+    android:versionCode="2"
+    android:versionName="2.0" >
 
     <uses-sdk
         android:minSdkVersion="8"
@@ -16,6 +16,34 @@
         android:label="@string/app_name" >
         <activity
             android:name=".Sensplore"
+            android:label="@string/app_name"
+            android:screenOrientation="portrait" >
+            <intent-filter>
+            </intent-filter>
+        </activity>
+        <activity
+            android:name=".Poll"
+            android:label="@string/sensor_poll"
+            android:screenOrientation="portrait" >
+            <intent-filter>
+            </intent-filter>
+        </activity>
+        <activity
+            android:name=".TiltActivity"
+            android:label="@string/orientation_readout"
+            android:screenOrientation="portrait" >
+            <intent-filter>
+            </intent-filter>
+        </activity>
+        <activity
+            android:name=".FlipActivity"
+            android:label="@string/flipup_detect"
+            android:screenOrientation="portrait" >
+            <intent-filter>
+            </intent-filter>
+        </activity>
+        <activity
+            android:name=".Main"
             android:label="@string/app_name"
             android:screenOrientation="portrait" >
             <intent-filter>

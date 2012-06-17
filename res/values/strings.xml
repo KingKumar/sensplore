@@ -1,36 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <string name="pick_test">Choose test</string>
-    <string name="test_name">Choose test</string>
     <string name="start_test">Go!</string>
     <string name="stop_test">Done</string>
+    <string name="your_sensors">Your Sensors</string>
+    <string name="kinetics_test">Kinetics test</string>
+    <string name="sensor_poll">Sensor poll</string>
     <string name="app_name">Sensplore</string>
-    <string name="goto_oreadout">Orientation readout</string>
-    <string name="goto_detect_back">Detect  back tap</string>
-    <string name="taps">"Taps: "</string>
-
-    <string-array name="test_names">
-        <item>--no test selected (reset file)--</item>
-        <item>Shake once</item>
-        <item>Shake twice</item>
-        <item>Shake thrice</item>
-        <item>Tap right side at top</item>
-        <item>Tap right side in middle</item>
-        <item>Tap back near top left</item>
-        <item>Tap back at top center</item>
-        <item>Tap back near top right</item>
-        <item>Tap back middle left</item>
-        <item>Tap back middle center</item>
-        <item>Tap back middle right</item>
-        <item>Tap top at left</item>
-        <item>Tap top in middle</item>
-        <item>Tap top at right</item>
-        <item>Tap left side at top</item>
-        <item>Tap left side in middle</item>
-        <item>Chop left</item>
-        <item>Chop right</item>
-        <item>Big gesture from left hip to right shoulder</item>
-    </string-array>
-
+    <string name="orientation_readout">Tilt readout</string>
+    <string name="tilt">"Tilt: "</string>
+    <string name="flipup_detect">Flipup detect</string>
+    <string name="at_rest">"..."</string>
+    <string name="flip_up">Up!</string>
+    <string name="flip_down">Down!</string>
+    
 </resources>
