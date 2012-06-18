@@ -13,5 +13,8 @@
     <string name="at_rest">"..."</string>
     <string name="flip_up">Up!</string>
     <string name="flip_down">Down!</string>
+    <string name="now_face_down">Now face-down!</string>
+    <string name="now_face_up">Now face-up!</string>
+    
     
 </resources>

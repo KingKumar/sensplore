@@ -18,12 +18,18 @@ public class FlipActivity extends Activity {
             
             @Override
             public boolean kineticRecognized(int kinetic) {
-                switch (kinetic) {
+                switch (kinetic) { 
                 case Kinetics.FLIP_UP:
                     mReadout.setText(FlipActivity.this.getText(R.string.flip_up));
                     break;
                 case Kinetics.FLIP_DOWN:
                     mReadout.setText(FlipActivity.this.getText(R.string.flip_down));
+                    break;
+                case Kinetics.NOW_FACE_DOWN:
+                    mReadout.setText(FlipActivity.this.getText(R.string.now_face_down));
+                    break;
+                case Kinetics.NOW_FACE_UP:
+                    mReadout.setText(FlipActivity.this.getText(R.string.now_face_up));
                     break;
                 }
                 return false;
